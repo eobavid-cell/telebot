@@ -1,0 +1,25 @@
+name: Auto Telegram Network Publisher
+
+on:
+  schedule:
+    # يعمل تلقائياً كل ساعتين على مدار الـ 24 ساعة مجاناً
+    - cron: '0 */2 * * *'
+  workflow_dispatch: # يسمح لك بتشغيله بضغطة زر للتجربة الفورية
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run Publisher Script
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python publisher.py
