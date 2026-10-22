@@ -3,18 +3,18 @@ import json
 import random
 import urllib.request
 
-# سحب المفاتيح السرية من إعدادات GitHub بأمان
+# 1. سحب المفاتيح السرية من إعدادات GitHub بأمان
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
-# --- 1. إعدادات شبكتك (عدّل المعرفات والروابط هنا مرة واحدة فقط) ---
+# 2. إعدادات شبكتك (القنوات المستهدفة)
 CHANNELS = {
     "chat": "@Sahran_Chat",      # معرف قروب الدردشة والتعارف
     "booh": "@Booh_Vip",         # معرف قناة البوح والاقتباسات
     "puzzle": "@IQ_Challenge0"   # معرف قناة الألغاز والتحديات
 }
 
-# الأزرار الثابتة (الليستة الشبكية) التي ستظهر أسفل كل منشور في كل المجموعات لجلب الناس لبوتاتك
+# 3. الأزرار الثابتة (التي ستربط شبكتك ببعضها وتجلب الزيارات لبوت الأرباح)
 NETWORK_BUTTONS = {
     "inline_keyboard": [
         [
@@ -22,7 +22,7 @@ NETWORK_BUTTONS = {
         ],
         [
             {"text": "💬 قروب دردشة وسهر", "url": "https://t.me/Sahran_Chat"},
-            {"text": "🖤 همسات وبوح", "url": "https://t.me/Booh_Vip"} # <-- تم تصحيح الرابط هنا
+            {"text": "🖤 همسات وبوح", "url": "https://t.me/Booh_Vip"}
         ],
         [
             {"text": "🧠 ألغاز وتحديات", "url": "https://t.me/IQ_Challenge0"},
@@ -31,7 +31,7 @@ NETWORK_BUTTONS = {
     ]
 }
 
-# --- 2. محتوى احتياطي (يعمل تلقائياً إذا لم تضع مفتاح Gemini) ---
+# 4. محتوى احتياطي (يعمل تلقائياً كخطة طوارئ إذا توقف الـ API)
 FALLBACK_CONTENT = {
     "chat": [
         "🔥 **سؤال للنقاش بصراحة:**\nلو خيروك بين السفر لدولة أحلامك بدون مال، أو البقاء في بلدك مع 50 ألف دولار.. ماذا تختار ولماذا؟ 🤔👇",
@@ -49,8 +49,9 @@ FALLBACK_CONTENT = {
 }
 
 def generate_ai_post(category):
-    """توليد منشور جديد تلقائياً عبر Gemini API المجاني لكي لا يتكرر المحتوى أبداً"""
+    """توليد منشور جديد تلقائياً عبر Gemini API لتجديد المحتوى باستمرار"""
     if not GEMINI_API_KEY:
+        print("⚠️ لم يتم العثور على مفتاح Gemini، سيتم استخدام المحتوى الاحتياطي.")
         return random.choice(FALLBACK_CONTENT[category])
     
     prompts = {
@@ -59,7 +60,8 @@ def generate_ai_post(category):
         "puzzle": "اكتب لغزاً ذكياً وقصيراً وممتعاً يتطلب التفكير، بدون كتابة الجواب، واطلب من القراء كتابة الحل في التعليقات. بدون مقدمات."
     }
     
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+    # استخدام نموذج gemini-1.5-flash المستقر والمجاني
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
     data = {"contents": [{"parts": [{"text": prompts[category]}]}]}
     
     try:
@@ -68,20 +70,25 @@ def generate_ai_post(category):
             data=json.dumps(data).encode('utf-8'), 
             headers={'Content-Type': 'application/json'}
         )
-        with urllib.request.urlopen(req, timeout=10) as response:
+        with urllib.request.urlopen(req, timeout=15) as response:
             res = json.loads(response.read().decode('utf-8'))
             return res['candidates'][0]['content']['parts'][0]['text'].strip()
     except Exception as e:
-        print(f"AI Fallback used: {e}")
+        print(f"⚠️ خطأ في الذكاء الاصطناعي (تم تفعيل المحتوى الاحتياطي): {e}")
         return random.choice(FALLBACK_CONTENT[category])
 
 def send_telegram_post(chat_id, text):
-    """إرسال المنشور مع الليستة الشبكية (الأزرار) إلى تليجرام"""
+    """إرسال المنشور مع أزرار الشبكة إلى تليجرام"""
+    if not BOT_TOKEN:
+        print("❌ خطأ: لم يتم العثور على توكن البوت (BOT_TOKEN)!")
+        return
+
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": chat_id,
         "text": text + "\n\n━━━━━━━━━━━━━━\n👇 **تصفح شبكتنا واحصل على هداياك:**",
         "parse_mode": "Markdown",
+        "disable_web_page_preview": True,
         "reply_markup": NETWORK_BUTTONS
     }
     try:
@@ -92,11 +99,16 @@ def send_telegram_post(chat_id, text):
         )
         with urllib.request.urlopen(req, timeout=10) as response:
             print(f"✅ تم النشر بنجاح في {chat_id}")
+    except urllib.error.HTTPError as e:
+        error_msg = e.read().decode('utf-8')
+        print(f"❌ خطأ تليجرام في {chat_id}: {error_msg}")
     except Exception as e:
         print(f"❌ خطأ أثناء النشر في {chat_id}: {e}")
 
 if __name__ == "__main__":
+    print("🚀 بدء تشغيل سكريبت النشر الآلي...")
     for category, channel_id in CHANNELS.items():
-        if not channel_id.startswith("@Your"): 
+        if channel_id: 
             post_text = generate_ai_post(category)
             send_telegram_post(channel_id, post_text)
+    print("🏁 انتهت عملية النشر بنجاح.")
