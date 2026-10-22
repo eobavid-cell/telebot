@@ -9,9 +9,9 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 # --- 1. إعدادات شبكتك (عدّل المعرفات والروابط هنا مرة واحدة فقط) ---
 CHANNELS = {
-    "chat": "@Sahran_Chat",      # ضع هنا معرف قروب الدردشة والتعارف
-    "booh": "@Booh_Vip",    # ضع هنا معرف قناة البوح والاقتباسات
-    "puzzle": "@IQ_Challenge0" # ضع هنا معرف قناة الألغاز والتحديات
+    "chat": "@Sahran_Chat",      # معرف قروب الدردشة والتعارف
+    "booh": "@Booh_Vip",         # معرف قناة البوح والاقتباسات
+    "puzzle": "@IQ_Challenge0"   # معرف قناة الألغاز والتحديات
 }
 
 # الأزرار الثابتة (الليستة الشبكية) التي ستظهر أسفل كل منشور في كل المجموعات لجلب الناس لبوتاتك
@@ -22,7 +22,7 @@ NETWORK_BUTTONS = {
         ],
         [
             {"text": "💬 قروب دردشة وسهر", "url": "https://t.me/Sahran_Chat"},
-            {"text": "🖤 همسات وبوح", "url": "https://t.me/Sahran_Chat"}
+            {"text": "🖤 همسات وبوح", "url": "https://t.me/Booh_Vip"} # <-- تم تصحيح الرابط هنا
         ],
         [
             {"text": "🧠 ألغاز وتحديات", "url": "https://t.me/IQ_Challenge0"},
@@ -97,6 +97,6 @@ def send_telegram_post(chat_id, text):
 
 if __name__ == "__main__":
     for category, channel_id in CHANNELS.items():
-        if not channel_id.startswith("@Your"): # يتأكد أنك وضعت معرف قناتك الحقيقي
+        if not channel_id.startswith("@Your"): 
             post_text = generate_ai_post(category)
             send_telegram_post(channel_id, post_text)
