@@ -61,7 +61,7 @@ def generate_ai_post(category):
     }
     
     # استخدام نموذج gemini-1.5-flash المستقر والمجاني
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={GEMINI_API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={GEMINI_API_KEY}"
     data = {"contents": [{"parts": [{"text": prompts[category]}]}]}
     
     try:
