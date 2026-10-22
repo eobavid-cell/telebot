@@ -1,6 +1,7 @@
 import os
 import json
 import random
+import time
 import urllib.request
 import urllib.error
 
@@ -30,7 +31,7 @@ NETWORK_BUTTONS = {
     ]
 }
 
-# 4. محتوى احتياطي
+# 4. محتوى احتياطي للطوارئ
 FALLBACK_CONTENT = {
     "chat": [
         "🔥 **سؤال للنقاش بصراحة:**\nلو خيروك بين السفر لدولة أحلامك بدون مال، أو البقاء في بلدك مع 50 ألف دولار.. ماذا تختار ولماذا؟ 🤔👇",
@@ -48,7 +49,7 @@ FALLBACK_CONTENT = {
 }
 
 def generate_ai_post(category):
-    """توليد منشور جديد عبر النموذج المحدث gemini-3.8-flash"""
+    """توليد منشور مع محاولة إعادة الاتصال تلقائياً لو حدث ضغط 503"""
     if not GEMINI_API_KEY:
         return random.choice(FALLBACK_CONTENT[category])
     
@@ -58,28 +59,35 @@ def generate_ai_post(category):
         "puzzle": "اكتب لغزاً ذكياً وقصيراً وممتعاً يتطلب التفكير، بدون كتابة الجواب، واطلب من القراء كتابة الحل في التعليقات. بدون مقدمات."
     }
     
-    # استخدام النموذج المعتمد رسمياً من جوجل لحسابك
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={GEMINI_API_KEY}"
     data = {"contents": [{"parts": [{"text": prompts[category]}]}]}
     
-    try:
-        req = urllib.request.Request(
-            url, 
-            data=json.dumps(data).encode('utf-8'), 
-            headers={'Content-Type': 'application/json'}
-        )
-        with urllib.request.urlopen(req, timeout=15) as response:
-            res = json.loads(response.read().decode('utf-8'))
-            ai_text = res['candidates'][0]['content']['parts'][0]['text'].strip()
-            print(f"🤖 [Gemini 3.8 Flash] تم توليد النص لقسم [{category}] بنجاح!")
-            return ai_text
-    except urllib.error.HTTPError as e:
-        err_details = e.read().decode('utf-8')
-        print(f"⚠️ خطأ من سيرفر جوجل ({e.code}): {err_details}")
-        return random.choice(FALLBACK_CONTENT[category])
-    except Exception as e:
-        print(f"⚠️ خطأ عام: {e}")
-        return random.choice(FALLBACK_CONTENT[category])
+    # محاولة الاتصال حتى 3 مرات في حال حدوث ضغط 503
+    for attempt in range(3):
+        try:
+            req = urllib.request.Request(
+                url, 
+                data=json.dumps(data).encode('utf-8'), 
+                headers={'Content-Type': 'application/json'}
+            )
+            with urllib.request.urlopen(req, timeout=20) as response:
+                res = json.loads(response.read().decode('utf-8'))
+                ai_text = res['candidates'][0]['content']['parts'][0]['text'].strip()
+                print(f"🤖 [Gemini] تم توليد النص لقسم [{category}] بنجاح!")
+                return ai_text
+        except urllib.error.HTTPError as e:
+            if e.code == 503 and attempt < 2:
+                print(f"⚠️ الضغط عالي (503)، جاري إعادة المحاولة خلال 3 ثوانٍ (محاولة {attempt + 1})...")
+                time.sleep(3)
+                continue
+            err_details = e.read().decode('utf-8')
+            print(f"⚠️ خطأ من سيرفر جوجل ({e.code}): {err_details}")
+            break
+        except Exception as e:
+            print(f"⚠️ خطأ عام: {e}")
+            break
+            
+    return random.choice(FALLBACK_CONTENT[category])
 
 def send_telegram_post(chat_id, text):
     """إرسال المنشور إلى تليجرام"""
@@ -106,9 +114,10 @@ def send_telegram_post(chat_id, text):
         print(f"❌ خطأ تليجرام: {e}")
 
 if __name__ == "__main__":
-    print("🚀 بدء تشغيل سكريبت النشر الآلي بالنموذج الجديد...")
+    print("🚀 بدء تشغيل سكريبت النشر الآلي...")
     for category, channel_id in CHANNELS.items():
         if channel_id: 
             post_text = generate_ai_post(category)
             send_telegram_post(channel_id, post_text)
+            time.sleep(2) # فاصل زمني قصير بين القنوات لتجنب الحظر
     print("🏁 انتهت عملية النشر بنجاح.")
