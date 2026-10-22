@@ -5,7 +5,7 @@ import urllib.request
 
 # 1. سحب المفاتيح السرية من إعدادات GitHub بأمان
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 
 # 2. إعدادات شبكتك (القنوات المستهدفة)
 CHANNELS = {
@@ -61,7 +61,7 @@ def generate_ai_post(category):
     }
     
     # استخدام نموذج gemini-1.5-flash المستقر والمجاني
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
     data = {"contents": [{"parts": [{"text": prompts[category]}]}]}
     
     try:
